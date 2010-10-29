@@ -83,8 +83,6 @@ extern int percpu_pagelist_fraction;
 extern int compat_log;
 extern int latencytop_enabled;
 extern int sysctl_nr_open_min, sysctl_nr_open_max;
-extern int rr_interval;
-extern int sched_iso_cpu;
 #ifndef CONFIG_MMU
 extern int sysctl_nr_trim_pages;
 #endif
@@ -103,14 +101,11 @@ static int two = 2;
 #endif
 
 static int zero;
-//static int one = 1;
-//static int one_hundred = 100;
+static int one = 1;
 static unsigned long one_ul = 1;
-static int __read_mostly one = 1;
-static int __read_mostly one_hundred = 100;
-static int __read_mostly five_thousand = 5000;
- 
- /* this is needed for the proc_dointvec_minmax for [fs_]overflow UID and GID */
+static int one_hundred = 100;
+
+/* this is needed for the proc_dointvec_minmax for [fs_]overflow UID and GID */
 static int maxolduid = 65535;
 static int minolduid;
 static int min_percpu_pagelist_fract = 8;
@@ -239,7 +234,123 @@ static struct ctl_table root_table[] = {
 	{ .ctl_name = 0 }
 };
 
+#ifdef CONFIG_SCHED_DEBUG
+static int min_sched_granularity_ns = 100000;		/* 100 usecs */
+static int max_sched_granularity_ns = NSEC_PER_SEC;	/* 1 second */
+static int min_wakeup_granularity_ns;			/* 0 usecs */
+static int max_wakeup_granularity_ns = NSEC_PER_SEC;	/* 1 second */
+#endif
+
 static struct ctl_table kern_table[] = {
+#ifdef CONFIG_SCHED_DEBUG
+	{
+		.ctl_name	= CTL_UNNUMBERED,
+		.procname	= "sched_min_granularity_ns",
+		.data		= &sysctl_sched_min_granularity,
+		.maxlen		= sizeof(unsigned int),
+		.mode		= 0644,
+		.proc_handler	= &sched_nr_latency_handler,
+		.strategy	= &sysctl_intvec,
+		.extra1		= &min_sched_granularity_ns,
+		.extra2		= &max_sched_granularity_ns,
+	},
+	{
+		.ctl_name	= CTL_UNNUMBERED,
+		.procname	= "sched_latency_ns",
+		.data		= &sysctl_sched_latency,
+		.maxlen		= sizeof(unsigned int),
+		.mode		= 0644,
+		.proc_handler	= &sched_nr_latency_handler,
+		.strategy	= &sysctl_intvec,
+		.extra1		= &min_sched_granularity_ns,
+		.extra2		= &max_sched_granularity_ns,
+	},
+	{
+		.ctl_name	= CTL_UNNUMBERED,
+		.procname	= "sched_wakeup_granularity_ns",
+		.data		= &sysctl_sched_wakeup_granularity,
+		.maxlen		= sizeof(unsigned int),
+		.mode		= 0644,
+		.proc_handler	= &proc_dointvec_minmax,
+		.strategy	= &sysctl_intvec,
+		.extra1		= &min_wakeup_granularity_ns,
+		.extra2		= &max_wakeup_granularity_ns,
+	},
+	{
+		.ctl_name	= CTL_UNNUMBERED,
+		.procname	= "sched_shares_ratelimit",
+		.data		= &sysctl_sched_shares_ratelimit,
+		.maxlen		= sizeof(unsigned int),
+		.mode		= 0644,
+		.proc_handler	= &proc_dointvec,
+	},
+	{
+		.ctl_name	= CTL_UNNUMBERED,
+		.procname	= "sched_shares_thresh",
+		.data		= &sysctl_sched_shares_thresh,
+		.maxlen		= sizeof(unsigned int),
+		.mode		= 0644,
+		.proc_handler	= &proc_dointvec_minmax,
+		.strategy	= &sysctl_intvec,
+		.extra1		= &zero,
+	},
+	{
+		.ctl_name	= CTL_UNNUMBERED,
+		.procname	= "sched_child_runs_first",
+		.data		= &sysctl_sched_child_runs_first,
+		.maxlen		= sizeof(unsigned int),
+		.mode		= 0644,
+		.proc_handler	= &proc_dointvec,
+	},
+	{
+		.ctl_name	= CTL_UNNUMBERED,
+		.procname	= "sched_features",
+		.data		= &sysctl_sched_features,
+		.maxlen		= sizeof(unsigned int),
+		.mode		= 0644,
+		.proc_handler	= &proc_dointvec,
+	},
+	{
+		.ctl_name	= CTL_UNNUMBERED,
+		.procname	= "sched_migration_cost",
+		.data		= &sysctl_sched_migration_cost,
+		.maxlen		= sizeof(unsigned int),
+		.mode		= 0644,
+		.proc_handler	= &proc_dointvec,
+	},
+	{
+		.ctl_name	= CTL_UNNUMBERED,
+		.procname	= "sched_nr_migrate",
+		.data		= &sysctl_sched_nr_migrate,
+		.maxlen		= sizeof(unsigned int),
+		.mode		= 0644,
+		.proc_handler	= &proc_dointvec,
+	},
+#endif
+	{
+		.ctl_name	= CTL_UNNUMBERED,
+		.procname	= "sched_rt_period_us",
+		.data		= &sysctl_sched_rt_period,
+		.maxlen		= sizeof(unsigned int),
+		.mode		= 0644,
+		.proc_handler	= &sched_rt_handler,
+	},
+	{
+		.ctl_name	= CTL_UNNUMBERED,
+		.procname	= "sched_rt_runtime_us",
+		.data		= &sysctl_sched_rt_runtime,
+		.maxlen		= sizeof(int),
+		.mode		= 0644,
+		.proc_handler	= &sched_rt_handler,
+	},
+	{
+		.ctl_name	= CTL_UNNUMBERED,
+		.procname	= "sched_compat_yield",
+		.data		= &sysctl_sched_compat_yield,
+		.maxlen		= sizeof(unsigned int),
+		.mode		= 0644,
+		.proc_handler	= &proc_dointvec,
+	},
 #ifdef CONFIG_PROVE_LOCKING
 	{
 		.ctl_name	= CTL_UNNUMBERED,
@@ -645,28 +756,6 @@ static struct ctl_table kern_table[] = {
 		.proc_handler	= &proc_dointvec,
 	},
 #endif
-	{
-		.ctl_name	= CTL_UNNUMBERED,
-		.procname	= "rr_interval",
-		.data		= &rr_interval,
-		.maxlen		= sizeof (int),
-		.mode		= 0644,
-		.proc_handler	= &proc_dointvec_minmax,
-		.strategy	= &sysctl_intvec,
-		.extra1		= &one,
-		.extra2		= &five_thousand,
-	},
-	{
-		.ctl_name	= CTL_UNNUMBERED,
-		.procname	= "iso_cpu",
-		.data		= &sched_iso_cpu,
-		.maxlen		= sizeof (int),
-		.mode		= 0644,
-		.proc_handler	= &proc_dointvec_minmax,
-		.strategy	= &sysctl_intvec,
-		.extra1		= &zero,
-		.extra2		= &one_hundred,
-	},
 #if defined(CONFIG_S390) && defined(CONFIG_SMP)
 	{
 		.ctl_name	= KERN_SPIN_RETRY,
@@ -862,7 +951,7 @@ static struct ctl_table vm_table[] = {
 	},
 	{
 		.ctl_name	= VM_PAGE_CLUSTER,
-		.procname	= "page-cluster",
+		.procname	= "page-cluster", 
 		.data		= &page_cluster,
 		.maxlen		= sizeof(int),
 		.mode		= 0644,
@@ -1320,7 +1409,7 @@ static struct ctl_table fs_table[] = {
 		.mode		= 0555,
 		.child		= inotify_table,
 	},
-#endif
+#endif	
 #ifdef CONFIG_EPOLL
 	{
 		.procname	= "epoll",
@@ -1605,7 +1694,7 @@ int do_sysctl(int __user *name, int nlen, void __user *oldval, size_t __user *ol
 
 	for (head = sysctl_head_next(NULL); head;
 			head = sysctl_head_next(head)) {
-		error = parse_table(name, nlen, oldval, oldlenp,
+		error = parse_table(name, nlen, oldval, oldlenp, 
 					newval, newlen,
 					head->root, head->ctl_table);
 		if (error != -ENOTDIR) {
@@ -1803,7 +1892,7 @@ static void try_attach(struct ctl_table_header *p, struct ctl_table_header *q)
  * cover common cases -
  *
  * proc_dostring(), proc_dointvec(), proc_dointvec_jiffies(),
- * proc_dointvec_userhz_jiffies(), proc_dointvec_minmax(),
+ * proc_dointvec_userhz_jiffies(), proc_dointvec_minmax(), 
  * proc_doulongvec_ms_jiffies_minmax(), proc_doulongvec_minmax()
  *
  * It is the handler's job to read the input buffer from user memory
@@ -2119,16 +2208,16 @@ static int __do_proc_dointvec(void *tbl_data, struct ctl_table *table,
 	int *i, vleft, first=1, neg, val;
 	unsigned long lval;
 	size_t left, len;
-
+	
 	char buf[TMPBUFLEN], *p;
 	char __user *s = buffer;
-
+	
 	if (!tbl_data || !table->maxlen || !*lenp ||
 	    (*ppos && !write)) {
 		*lenp = 0;
 		return 0;
 	}
-
+	
 	i = (int *) tbl_data;
 	vleft = table->maxlen / sizeof(*i);
 	left = *lenp;
@@ -2180,7 +2269,7 @@ static int __do_proc_dointvec(void *tbl_data, struct ctl_table *table,
 			p = buf;
 			if (!first)
 				*p++ = '\t';
-
+	
 			if (conv(&neg, &lval, i, 0, data))
 				break;
 
@@ -2238,7 +2327,7 @@ static int do_proc_dointvec(struct ctl_table *table, int write, struct file *fil
  * @ppos: file position
  *
  * Reads/writes up to table->maxlen/sizeof(unsigned int) integer
- * values from/to the user buffer, treated as an ASCII string.
+ * values from/to the user buffer, treated as an ASCII string. 
  *
  * Returns 0 on success.
  */
@@ -2289,8 +2378,8 @@ struct do_proc_dointvec_minmax_conv_param {
 	int *max;
 };
 
-static int do_proc_dointvec_minmax_conv(int *negp, unsigned long *lvalp,
-					int *valp,
+static int do_proc_dointvec_minmax_conv(int *negp, unsigned long *lvalp, 
+					int *valp, 
 					int write, void *data)
 {
 	struct do_proc_dointvec_minmax_conv_param *param = data;
@@ -2354,19 +2443,19 @@ static int __do_proc_doulongvec_minmax(void *data, struct ctl_table *table, int 
 	size_t len, left;
 	char buf[TMPBUFLEN], *p;
 	char __user *s = buffer;
-
+	
 	if (!data || !table->maxlen || !*lenp ||
 	    (*ppos && !write)) {
 		*lenp = 0;
 		return 0;
 	}
-
+	
 	i = (unsigned long *) data;
 	min = (unsigned long *) table->extra1;
 	max = (unsigned long *) table->extra2;
 	vleft = table->maxlen / sizeof(unsigned long);
 	left = *lenp;
-
+	
 	for (; left && vleft--; i++, min++, max++, first=0) {
 		if (write) {
 			while (left) {
@@ -2585,7 +2674,7 @@ static int do_proc_dointvec_ms_jiffies_conv(int *negp, unsigned long *lvalp,
  * @ppos: file position
  *
  * Reads/writes up to table->maxlen/sizeof(unsigned int) integer
- * values from/to the user buffer, treated as an ASCII string.
+ * values from/to the user buffer, treated as an ASCII string. 
  * The values read are assumed to be in seconds, and are converted into
  * jiffies.
  *
@@ -2608,8 +2697,8 @@ int proc_dointvec_jiffies(struct ctl_table *table, int write, struct file *filp,
  * @ppos: pointer to the file position
  *
  * Reads/writes up to table->maxlen/sizeof(unsigned int) integer
- * values from/to the user buffer, treated as an ASCII string.
- * The values read are assumed to be in 1/USER_HZ seconds, and
+ * values from/to the user buffer, treated as an ASCII string. 
+ * The values read are assumed to be in 1/USER_HZ seconds, and 
  * are converted into jiffies.
  *
  * Returns 0 on success.
@@ -2632,8 +2721,8 @@ int proc_dointvec_userhz_jiffies(struct ctl_table *table, int write, struct file
  * @ppos: the current position in the file
  *
  * Reads/writes up to table->maxlen/sizeof(unsigned int) integer
- * values from/to the user buffer, treated as an ASCII string.
- * The values read are assumed to be in 1/1000 seconds, and
+ * values from/to the user buffer, treated as an ASCII string. 
+ * The values read are assumed to be in 1/1000 seconds, and 
  * are converted into jiffies.
  *
  * Returns 0 on success.
@@ -2725,7 +2814,7 @@ int proc_doulongvec_ms_jiffies_minmax(struct ctl_table *table, int write,
 
 #ifdef CONFIG_SYSCTL_SYSCALL
 /*
- * General sysctl support routines
+ * General sysctl support routines 
  */
 
 /* The generic sysctl data routine (used if no strategy routine supplied) */
@@ -2767,9 +2856,9 @@ int sysctl_string(struct ctl_table *table,
 		  void __user *oldval, size_t __user *oldlenp,
 		  void __user *newval, size_t newlen)
 {
-	if (!table->data || !table->maxlen)
+	if (!table->data || !table->maxlen) 
 		return -ENOTDIR;
-
+	
 	if (oldval && oldlenp) {
 		size_t bufsize;
 		if (get_user(bufsize, oldlenp))
@@ -2844,7 +2933,7 @@ int sysctl_intvec(struct ctl_table *table,
 	return 0;
 }
 
-/* Strategy function to convert jiffies to seconds */
+/* Strategy function to convert jiffies to seconds */ 
 int sysctl_jiffies(struct ctl_table *table,
 		void __user *oldval, size_t __user *oldlenp,
 		void __user *newval, size_t newlen)
@@ -2867,18 +2956,18 @@ int sysctl_jiffies(struct ctl_table *table,
 				return -EFAULT;
 		}
 	}
-	if (newval && newlen) {
+	if (newval && newlen) { 
 		int new;
 		if (newlen != sizeof(int))
-			return -EINVAL;
+			return -EINVAL; 
 		if (get_user(new, (int __user *)newval))
 			return -EFAULT;
-		*(int *)(table->data) = new*HZ;
+		*(int *)(table->data) = new*HZ; 
 	}
 	return 1;
 }
 
-/* Strategy function to convert jiffies to seconds */
+/* Strategy function to convert jiffies to seconds */ 
 int sysctl_ms_jiffies(struct ctl_table *table,
 		void __user *oldval, size_t __user *oldlenp,
 		void __user *newval, size_t newlen)
@@ -2901,10 +2990,10 @@ int sysctl_ms_jiffies(struct ctl_table *table,
 				return -EFAULT;
 		}
 	}
-	if (newval && newlen) {
+	if (newval && newlen) { 
 		int new;
 		if (newlen != sizeof(int))
-			return -EINVAL;
+			return -EINVAL; 
 		if (get_user(new, (int __user *)newval))
 			return -EFAULT;
 		*(int *)(table->data) = msecs_to_jiffies(new);
