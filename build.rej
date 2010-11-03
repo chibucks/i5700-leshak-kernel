@@ -1,0 +1,41 @@
+--- build
++++ build
+@@ -14,7 +14,7 @@
+ # this radically speeds up swapping between build contexts.  Note the config
+ # for each build lives in the subdir.
+ 
+-PARALLEL=16
++PARALLEL=1
+ 
+ if [ -z "$1" ] ; then
+ 	echo "Specify the build subdir, eg, GTA02 which contains the .config"
+@@ -109,20 +109,17 @@
+ 	# we can see if it is an "moredrivers" build by looking for USB Eth gadget
+ 	# if it is then keep a stamped copy of last build
+ 
+-	if [ ! -z "`grep CONFIG_USB_USBNET=y $1/.config`" ] ; then
+-		rm -f $1/uImage-moredrivers-$PRODUCT*.bin $1/modules-$PRODUCT*.tar.gz
+-		cp $1/uImage-$PRODUCT.bin $1/uImage-moredrivers$VERSION-$HEAD.bin
+-		rm -rf $1/staging
+-		mkdir -p $1/staging
+-		if [ ! -z "$2" ] ; then
+-			make O=$1 ARCH=arm modules_install INSTALL_MOD_PATH=staging
+-			cd $1/staging
+-			tar czf ../modules$VERSION-$HEAD.tar.gz .
+-			cd ../..
+-		fi
++	rm -f $1/uImage-moredrivers-$PRODUCT*.bin $1/modules-$PRODUCT*.tar.gz
++	cp $1/uImage-$PRODUCT.bin $1/uImage-moredrivers$VERSION-$HEAD.bin
++	rm -rf $1/staging
++	mkdir -p $1/staging
++	if [ ! -z "$2" ] ; then
++		make O=$1 ARCH=arm modules_install INSTALL_MOD_PATH=staging
++		cd $1/staging
++		tar czf ../modules$VERSION-$HEAD.tar.gz .
++		cd ../..
+ 	fi
+ 	exit 0
+ else
+ 	exit 1
+ fi
+-
